@@ -2,6 +2,8 @@
 
 This package provides a Python client for the OpenAI API, which allows you to use AI models to generate text, answer questions, and more. This client currently supports version 1 of the OpenAI API.
 
+## It is kinda reversed, so yeah
+
 ## Generating Text
 
 To generate text with the OpenAI API, you can use the generate method of the `V1` class. This method takes a prompt argument, which is a string containing the starting text that the AI model will use to generate more text. Here's an example:
