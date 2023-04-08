@@ -8,7 +8,7 @@ import requests
 
 
 class V1:
-    BASE_URL = "https://api.openai.com/"
+    BASE_URL = "https://api.openai.com/" # change this to localhost url if you're using the proxy server on proxy.py
     MODEL = "gpt-3.5-turbo"
     TIMEOUT = 360
 
