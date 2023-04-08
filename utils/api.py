@@ -1,17 +1,19 @@
+from __future__ import annotations
+
 import json
 import re
 from typing import Dict, Generator, List, Optional, Union
 from urllib.parse import urljoin
+import requests
 from .typings import *
 
-import requests
+API_VERSION = "v1"
+BASE_URL = f"https://api.openai.com/{API_VERSION}/"
+MODEL = "gpt-3.5-turbo"
+TIMEOUT = 360
 
 
 class V1:
-    BASE_URL = "https://api.openai.com/" # change this to localhost url if you're using the proxy server on proxy.py
-    MODEL = "gpt-3.5-turbo"
-    TIMEOUT = 360
-
     def __init__(
         self,
         key: str,
@@ -22,11 +24,11 @@ class V1:
         timeout: Optional[int] = None,
     ) -> None:
         self.key = f"Bearer {key}"
-        self.base_url = base_url or self.BASE_URL
-        self.model = model or self.MODEL
+        self.base_url = base_url or BASE_URL
+        self.model = model or MODEL
         self.temperature = temperature or 1
         self.top_p = top_p or 1
-        self.timeout = timeout or self.TIMEOUT
+        self.timeout = timeout or TIMEOUT
         self.messages: List[Dict[str, str]] = []
         self.session = requests.Session()
         self.session.headers.update({"Authorization": self.key})
@@ -55,7 +57,7 @@ class V1:
             "user": user or "chatgpt-python",
         }
 
-        url = urljoin(self.base_url, "/v1/chat/completions")
+        url = urljoin(self.base_url, f"/{API_VERSION}/chat/completions")
 
         response = self.session.post(
             url,
@@ -94,26 +96,22 @@ class V1:
         if not self._check_fields(data):
             raise ValueError("Field missing")
 
-        answer = data["choices"][0]["text"]
+        answer, message_id, usage = self._extract_answer_and_usage(data)
         self.add_message(answer, "assistant")
 
-        return [
-            AskResponse(
-                answer=answer,
-                id=data["id"],
-                model=self.model,
-                usage=data["model"]["usage"],
-            )
-        ]
+        return [AskResponse(answer=answer, id=message_id, model=self.model, usage=usage)]
+
+    def _extract_answer_and_usage(self, data: Dict) -> tuple[str, str, Dict]:
+        answer = data["choices"][0]["text"]
+        message_id = data["id"]
+        usage = data["model"]["usage"]
+        return answer, message_id, usage
 
     def _check_fields(self, data: Dict[str, Union[str, Dict[str, str]]]) -> bool:
-        return (
-            "choices" in data
-            and len(data["choices"]) > 0
-            and "text" in data["choices"][0]
-            and "id" in data
-            and "model" in data
-        )
+        return "choices" in data and "text" in self._choice(data) and "id" in data and "model" in data
+
+    def _choice(self, data: Dict) -> Dict:
+        return data["choices"][0] if len(data["choices"]) > 0 else {}
 
     def _check_stream_fields(self, data: Dict[str, Union[str, Dict[str, str]]]) -> bool:
         return (
@@ -126,7 +124,7 @@ class V1:
 
     def _format_stream_message(self, line: str) -> Dict[str, Union[str, Dict[str, str]]]:
         matches = re.match(r"data: (.+)", line)
-        if not matches:
+        if matches is None:
             return {}
 
         data = json.loads(matches.group(1))
