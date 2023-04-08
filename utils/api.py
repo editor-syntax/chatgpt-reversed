@@ -2,6 +2,7 @@ import json
 import re
 from typing import Dict, Generator, List, Optional, Union
 from urllib.parse import urljoin
+from .typings import *
 
 import requests
 
